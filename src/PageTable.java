@@ -3,10 +3,12 @@ import java.util.ArrayList;
 public class PageTable {
     private ArrayList<Page> pages; // Todas las páginas virtuales del proceso
     private int framesInRAM;       // Número de marcos disponibles en la RAM
+    private int pageSize;
 
     public PageTable(int totalPages, int pageSize, int framesInRAM) {
         pages = new ArrayList<>();
         this.framesInRAM = framesInRAM;
+        this.pageSize = pageSize;
         // Inicializar todas las páginas
         for (int i = 0; i < totalPages; i++) {
             pages.add(new Page(i, pageSize));
@@ -78,6 +80,36 @@ public class PageTable {
         for (Page page : pages) {
             if (page.isInRAM()) {
                 page.setReferenceBit(false); // Reiniciar el bit R después de la actualización
+            }
+        }
+    }
+
+    //CARGA MATRIZ DE PIXELES; LOOP SOBRE LISTA DE PÁGINAS
+    public void loadPixelsIntoPages(byte[][][] pixels) {
+        int byteCounter = 0;
+        int width = pixels[0].length; // Ancho de la imagen
+        int height = pixels.length;   // Alto de la imagen
+    
+        for (int i = 0; i < height; i++) {
+            for (int j = 0; j < width; j++) {
+                // Extraer el píxel (3 bytes) en formato BGR
+                byte[] pixel = {pixels[i][j][0], pixels[i][j][1], pixels[i][j][2]};
+    
+                // Calcular el índice de la página donde irá este píxel
+                int pageIndex = byteCounter / pageSize;
+    
+                if (pageIndex < pages.size()) {
+                    Page page = pages.get(pageIndex);
+    
+                    // Almacenar el píxel en la página (si queda espacio)
+                    int offset = byteCounter % pageSize;
+                    if (offset + 3 <= pageSize) {
+                        System.arraycopy(pixel, 0, page.getData(), offset, 3);
+                    }
+                }
+    
+                // Incrementar el contador de bytes procesados
+                byteCounter += 3; // 3 bytes por píxel
             }
         }
     }

@@ -4,7 +4,7 @@ public class Page {
     private boolean inRAM;      // Indica si la página está en la RAM
     private boolean referenceBit; // Bit de referencia R (para el algoritmo NUR)
     private long lastAccessTime;  // Marca de tiempo de acceso para implementar envejecimiento
-
+    
     // Constructor
     public Page(int pageNumber, int pageSize) {
         this.pageNumber = pageNumber;
