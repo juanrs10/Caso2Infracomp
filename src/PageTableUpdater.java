@@ -4,7 +4,7 @@ public class PageTableUpdater extends Thread {
     private PageTable pageTable;
     private long intervalMillis; // Intervalo en milisegundos
 
-    public PageTableUpdater(PageTable pageTable, ReentrantLock lock, long intervalMillis) {
+    public PageTableUpdater(PageTable pageTable, long intervalMillis) {
         this.pageTable = pageTable;
         this.intervalMillis = intervalMillis;
     }
