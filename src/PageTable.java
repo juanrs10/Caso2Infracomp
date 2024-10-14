@@ -84,6 +84,10 @@ public class PageTable {
         }
     }
 
+    // Método para que el thread de actualización del bit R lo use
+    public synchronized void updatePageTable() {
+    }
+
     //CARGA MATRIZ DE PIXELES; LOOP SOBRE LISTA DE PÁGINAS
     public void loadPixelsIntoPages(byte[][][] pixels) {
         int byteCounter = 0;
