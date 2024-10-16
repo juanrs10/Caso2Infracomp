@@ -12,9 +12,9 @@ public class PageTableUpdater extends Thread {
     @Override
     public void run() {
         while (true) {
-            // Actualizar la tabla de páginas y los marcos de página
-            pageTable.updatePageTable(); //Definir método
-            // Aquí también podrías realizar otras acciones relacionadas con los marcos en RAM
+            // Simulación de acceso a una página (podría ser aleatorio o determinado)
+            int pageToAccess = (int) (Math.random() * pageTable.getTotalPages());
+            pageTable.accessPage(pageToAccess); // Acceder a la página, puede haber un hit o una falla de página
 
             // Esperar el intervalo antes de volver a ejecutar
             try {
@@ -22,6 +22,6 @@ public class PageTableUpdater extends Thread {
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
+        }
     }
-}
 }

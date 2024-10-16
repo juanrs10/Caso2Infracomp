@@ -4,6 +4,7 @@ public class Page {
     private boolean inRAM;      // Indica si la página está en la RAM
     private boolean referenceBit; // Bit de referencia R (para el algoritmo NUR)
     private long lastAccessTime;  // Marca de tiempo de acceso para implementar envejecimiento
+    private byte agingCounter;    // Contador de envejecimiento (8 bits)
     
     // Constructor
     public Page(int pageNumber, int pageSize) {
@@ -11,6 +12,7 @@ public class Page {
         this.data = new byte[pageSize]; // Crear una página del tamaño especificado (en bytes)
         this.inRAM = false;            // Inicialmente, la página no está en la RAM
         this.referenceBit = false;     // Bit de referencia R inicial
+        this.agingCounter = 0;         // Inicializar el contador de envejecimiento en 0
         this.lastAccessTime = System.currentTimeMillis(); // Inicializa el tiempo de acceso
     }
 
@@ -51,5 +53,23 @@ public class Page {
 
     public long getLastAccessTime() {
         return lastAccessTime;
+    }
+
+    // Método para actualizar el contador de envejecimiento
+    public void updateAgingCounter() {
+        // Desplazar a la derecha el contador de envejecimiento
+        agingCounter = (byte) (agingCounter >> 1);
+
+        // Si el bit R está en 1, añadirlo en el bit más significativo del contador
+        if (referenceBit) {
+            agingCounter = (byte) (agingCounter | 0x80); // Añadir 1 en el bit más significativo
+        }
+
+        // Reiniciar el bit R después de usarlo
+        referenceBit = false;
+    }
+
+    public byte getAgingCounter() {
+        return agingCounter;
     }
 }

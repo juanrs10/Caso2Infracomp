@@ -9,6 +9,7 @@ public class App {
         byte[][][] pixels = bmpReader.getPixels();
         int width = bmpReader.getWidth();
         int height = bmpReader.getHeight();
+        
 
         // Definir el tamaño de la página (un múltiplo de 3 bytes)
         int pageSize = 12; // Por ejemplo, 12 bytes, lo que puede almacenar 4 píxeles

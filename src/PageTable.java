@@ -26,16 +26,6 @@ public class PageTable {
         return page;
     }
 
-    // Manejar una falla de página
-    private void handlePageFault(Page page) {
-        System.out.println("Falla de página en la página: " + page.getPageNumber());
-        if (countPagesInRAM() >= framesInRAM) {
-            // Si la RAM está llena, se necesita reemplazar una página
-            replacePage(page);
-        }
-        page.loadPage(new byte[page.getData().length]); // Simulación de cargar la página
-    }
-
     // Contar cuántas páginas están en RAM
     private int countPagesInRAM() {
         int count = 0;
@@ -47,45 +37,60 @@ public class PageTable {
         return count;
     }
 
-    // Reemplazar una página en RAM usando el algoritmo NUR
-    private void replacePage(Page newPage) {
-        Page pageToReplace = findPageToReplace();
-        pageToReplace.unloadPage();
-        newPage.loadPage(new byte[newPage.getData().length]); // Simulación de carga
-        System.out.println("Reemplazando página " + pageToReplace.getPageNumber() + " por " + newPage.getPageNumber());
-    }
-
-    // Encontrar una página para reemplazar usando el bit de referencia R
-    private Page findPageToReplace() {
-        // Implementar el algoritmo NUR basado en el bit R
-        for (Page p : pages) {
-            if (p.isInRAM() && !p.getReferenceBit()) {
-                return p; // Encontrar la primera página con bit R en 0
-            }
-        }
-        // Si todas tienen R en 1, escoger la más antigua (basado en lastAccessTime)
-        Page oldestPage = null;
-        for (Page p : pages) {
-            if (p.isInRAM()) {
-                if (oldestPage == null || p.getLastAccessTime() < oldestPage.getLastAccessTime()) {
-                    oldestPage = p;
-                }
-            }
-        }
-        return oldestPage;
-    }
-
     // Método para que el thread de actualización del bit R lo use
     public synchronized void updateBitR() {
         for (Page page : pages) {
             if (page.isInRAM()) {
-                page.setReferenceBit(false); // Reiniciar el bit R después de la actualización
+                // Actualizar el contador de envejecimiento
+                page.updateAgingCounter();
             }
         }
     }
-
     // Método para que el thread de actualización del bit R lo use
     public synchronized void updatePageTable() {
+    }
+
+    // Manejar una falla de página
+    private void handlePageFault(Page page) {
+        System.out.println("Falla de página en la página: " + page.getPageNumber());
+
+        // Verificar si la RAM está llena (ya se han asignado todos los marcos)
+        if (countPagesInRAM() >= framesInRAM) {
+            // Si la RAM está llena, se necesita reemplazar una página
+            replacePage(page);
+        } else {
+            // Si hay espacio en RAM, cargar la nueva página sin reemplazar
+            page.loadPage(new byte[page.getData().length]); // Simulación de cargar la página
+        }
+    }
+
+    // Reemplazar una página en RAM usando el algoritmo de envejecimiento (NUR)
+    private void replacePage(Page newPage) {
+        // Encontrar la página con el contador de envejecimiento más bajo
+        Page pageToReplace = findPageToReplace();
+
+        // Descargar la página seleccionada para reemplazo
+        pageToReplace.unloadPage();
+
+        // Cargar la nueva página en su lugar
+        newPage.loadPage(new byte[newPage.getData().length]); // Simulación de carga de la nueva página
+        System.out.println("Reemplazando página " + pageToReplace.getPageNumber() + " por " + newPage.getPageNumber());
+    }
+
+    // Encontrar la página con el contador de envejecimiento más bajo
+    private Page findPageToReplace() {
+        Page oldestPage = null;
+
+        // Buscar la página con el menor contador de envejecimiento
+        for (Page page : pages) {
+            if (page.isInRAM()) {
+                if (oldestPage == null || page.getAgingCounter() < oldestPage.getAgingCounter()) {
+                    oldestPage = page;
+                }
+            }
+        }
+
+        return oldestPage; // Devolver la página candidata para ser reemplazada
     }
 
     //CARGA MATRIZ DE PIXELES; LOOP SOBRE LISTA DE PÁGINAS
@@ -116,5 +121,9 @@ public class PageTable {
                 byteCounter += 3; // 3 bytes por píxel
             }
         }
+    }
+
+    public int getTotalPages(){
+        return pages.size();
     }
 }
