@@ -61,4 +61,64 @@ public class BMPReader {
     public int getHeight() {
         return height;
     }
+
+    public void writeMessage(String message) {
+        byte[] messageBytes = message.getBytes(); // Convertir el mensaje en bytes
+        int messageBitIndex = 0; // Índice del bit dentro del mensaje
+        int totalMessageBits = messageBytes.length * 8; // Total de bits en el mensaje
+    
+        outerLoop:
+        for (int i = 0; i < height; i++) {
+            for (int j = 0; j < width; j++) {
+                for (int color = 0; color < 3; color++) { // Recorrer BGR (3 bytes por píxel)
+                    if (messageBitIndex < totalMessageBits) {
+                        // Obtener el bit actual del mensaje (usamos operaciones de bit)
+                        int byteIndex = messageBitIndex / 8; // Índice del byte en el mensaje
+                        int bitIndex = messageBitIndex % 8; // Índice del bit dentro del byte
+                        int bit = (messageBytes[byteIndex] >> (7 - bitIndex)) & 1; // Extraer el bit más significativo
+    
+                        // Limpiar el LSB del byte actual y asignar el bit del mensaje
+                        pixels[i][j][color] = (byte) ((pixels[i][j][color] & 0xFE) | bit); // Reemplazar el LSB con el bit del mensaje
+    
+                        messageBitIndex++; // Avanzar al siguiente bit del mensaje
+                    } else {
+                        break outerLoop; // Salir cuando se han escrito todos los bits del mensaje
+                    }
+                }
+            }
+        }
+        
+        System.out.println("Mensaje oculto escrito correctamente en la imagen.");
+    }
+    
+    public String readMessage(int messageLength) {
+        byte[] messageBytes = new byte[messageLength]; // Almacenar los bytes del mensaje
+        int messageBitIndex = 0; // Índice del bit dentro del mensaje
+        int totalMessageBits = messageLength * 8; // Total de bits a leer
+    
+        outerLoop:
+        for (int i = 0; i < height; i++) {
+            for (int j = 0; j < width; j++) {
+                for (int color = 0; color < 3; color++) { // Recorrer BGR (3 bytes por píxel)
+                    if (messageBitIndex < totalMessageBits) {
+                        // Obtener el LSB del byte actual del píxel
+                        int bit = pixels[i][j][color] & 1; // Extraer el LSB
+    
+                        // Insertar el bit en el byte correspondiente del mensaje
+                        int byteIndex = messageBitIndex / 8; // Índice del byte en el mensaje
+                        int bitIndex = messageBitIndex % 8; // Índice del bit dentro del byte
+                        messageBytes[byteIndex] = (byte) ((messageBytes[byteIndex] << 1) | bit); // Insertar el bit
+    
+                        messageBitIndex++; // Avanzar al siguiente bit del mensaje
+                    } else {
+                        break outerLoop; // Salir cuando se han leído todos los bits del mensaje
+                    }
+                }
+            }
+        }
+        
+        return new String(messageBytes); // Convertir los bytes leídos a cadena
+    }
+    
+    
 }
