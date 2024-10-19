@@ -1,5 +1,7 @@
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.FileOutputStream;
+import java.io.File;
 
 public class BMPReader {
     private byte[] header = new byte[54]; // Cabecera BMP
@@ -133,4 +135,57 @@ public class BMPReader {
     }
     
     
+
+        for (int i = 0; i < longitud; i++) {
+            elByte = (byte) mensaje[i];
+            writeBits(contador, elByte, 8);
+            contador++;
+        }
+    }
+    private void writeBits(int contador, int valor, int numbits) {
+        int bytesPorFila = width * 3;
+        int mascara;
+        for (int i = 0; i < numbits; i++) {
+            int fila = (8 * contador + i) / bytesPorFila;
+            int col = ((8 * contador + i) % bytesPorFila) / 3;
+            int color = ((8 * contador + i) % bytesPorFila) % 3;
+            mascara = valor >> i;
+            mascara = mascara & 1;
+            pixels[fila][col][color] = (byte)((pixels[fila][col][color] & 0xFE) | mascara);
+        }
+    }
+    public void saveImage(String ruta) {
+        try (FileOutputStream fos = new FileOutputStream(new File(ruta))) {
+            fos.write(header);
+            // Escribir los píxeles y el padding
+            byte[] paddingBytes = new byte[padding];  // Array vacío para el padding
+            for (int i = 0; i < height; i++) {
+                for (int j = 0; j < width; j++) {
+                    fos.write(pixels[i][j]);  // Escribir los 3 bytes del píxel (RGB)
+                }
+                fos.write(paddingBytes);  
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    public String verifyHiddenMessage() {
+        int longitudMensaje = leerLongitud();
+        char[] mensajeRecuperado = new char[longitudMensaje];
+        restore(mensajeRecuperado, longitudMensaje);
+        return new String(mensajeRecuperado);
+    }
+    public void restore(char[] cadena, int longitud) {
+        int bytesFila = width * 3;
+        for (int posCaracter = 0; posCaracter < longitud; posCaracter++) {
+            cadena[posCaracter] = 0;
+            for (int i = 0; i < 8; i++) {
+                int numBytes = 16 + (posCaracter * 8) + i;
+                int fila = numBytes / bytesFila;
+                int col = numBytes % (bytesFila) / 3;
+                cadena[posCaracter] = (char)(cadena[posCaracter] | 
+                        (pixels[fila][col][((numBytes % bytesFila) % 3)] & 1) << i);
+            }
+        }
+    }
 }
