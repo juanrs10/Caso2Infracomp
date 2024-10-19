@@ -26,11 +26,20 @@ public class App {
                     int pageSize = scanner.nextInt();
                     scanner.nextLine(); // Consumir el salto de línea
 
-                    System.out.print("Ingrese el nombre del archivo de la imagen BMP: ");
+                    System.out.print("Ingrese la ruta del archivo de la imagen BMP: ");
                     String imageName = scanner.nextLine();
 
-                    // Generar archivo de referencias (Faltaría implementar la lógica completa)
-                    generarArchivoDeReferencias(pageSize, imageName);
+                    // Crear un lector BMP para obtener la longitud del mensaje
+                    BMPReader bmpReader = new BMPReader(imageName);
+
+                    // Nombre del archivo de salida para las referencias
+                    String outputFile = "referencias.txt";
+
+                    // Crear el generador de referencias
+                    ReferenceGenerator generator = new ReferenceGenerator(bmpReader, pageSize);
+
+                    // Generar las referencias y guardarlas en el archivo de salida
+                    generator.generateReferences(outputFile); 
                     break;
 
                 case 2:
@@ -58,35 +67,5 @@ public class App {
         }
         scanner.close();
     }
-
-    // Método para generar el archivo de referencias
-    public static void generarArchivoDeReferencias(int pageSize, String imageName) {
-        // Leer la imagen BMP
-        BMPReader bmpReader = new BMPReader(imageName);
-        byte[][][] pixels = bmpReader.getPixels();
-        int width = bmpReader.getWidth();
-        int height = bmpReader.getHeight();
-
-        // Calcular los valores de referencia (falta la lógica de distribución en páginas)
-        int totalBytes = width * height * 3; // Cada píxel son 3 bytes
-        int totalPages = (int) Math.ceil((double) totalBytes / pageSize); // Calcular cuántas páginas se necesitan
-
-        // Guardar los datos en un archivo de referencias
-        try (FileWriter writer = new FileWriter("referencias.txt")) {
-            writer.write("TP: " + pageSize + "\n");
-            writer.write("NF: " + height + "\n");
-            writer.write("NC: " + width + "\n");
-            writer.write("NR: " + totalBytes + "\n"); // Este sería el total de referencias de la imagen
-            writer.write("NP: " + totalPages + "\n");
-            
-            // Generar las referencias (Faltaría implementar la lógica de las referencias reales)
-            // Se deberían generar las referencias a las páginas de la matriz y el vector del mensaje.
-            
-            System.out.println("Archivo de referencias generado exitosamente.");
-        } catch (IOException e) {
-            System.out.println("Error al generar el archivo de referencias: " + e.getMessage());
-        }
-    }
-
 
 }

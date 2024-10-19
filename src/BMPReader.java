@@ -50,6 +50,18 @@ public class BMPReader {
         }
     }
 
+    public int leerLongitud() {
+        int longitud = 0;
+        // Usamos 16 bits para almacenar la longitud del mensaje.
+        // Esos 16 bits se esconden en los primeros 16 bytes de la imagen.
+        for (int i = 0; i < 16; i++) {
+            // Cada byte almacena un bit, así que leemos los primeros 16 bytes.
+            int byteValue = (pixels[0][i / 3][i % 3] & 1);
+            longitud |= (byteValue << i);
+        }
+        return longitud;
+    }
+    
     public byte[][][] getPixels() {
         return pixels;
     }
