@@ -134,7 +134,11 @@ public class BMPReader {
         return new String(messageBytes); // Convertir los bytes leídos a cadena
     }
     
-    
+    public void hideMessage(char[] mensaje, int longitud) {
+        int contador = 0;
+        byte elByte;
+        writeBits(contador, longitud, 16);
+        contador = 2;
 
         for (int i = 0; i < longitud; i++) {
             elByte = (byte) mensaje[i];
