@@ -1,3 +1,4 @@
+@ -1,292 +1,295 @@
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
@@ -153,6 +154,9 @@ public class CalculadoraDatos {
 
             bitacora.info("hits: " + hits);
             bitacora.info("Fallos: " + fallos);
+            bitacora.info("Tiempo total que se tomo el sistema " + tiempo);
+            bitacora.info("Tiempo total si todas las referencias estuvieran en RAM: " + tiempoRAM);
+            bitacora.info("Tiempo total si todas las referencias dieran una falla: " + tiempoFallas);
             ActualizadorBits.detenerHilo();
 
             //imprimir
