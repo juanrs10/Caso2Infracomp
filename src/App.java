@@ -6,7 +6,7 @@ import java.io.FileReader;
 
 public class App {
 
-    public static void main(String[] args) {    
+    public static void main(String[] args) throws IOException {    
         Scanner scanner = new Scanner(System.in);
         boolean salir = false;
 

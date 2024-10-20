@@ -2,11 +2,15 @@ import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 
 public class ReferenceGenerator {
 
     private BMPReader bmpReader; // Clase que lee la imagen BMP
     private int pageSize; // Tamaño de la página en bytes
+    private ArrayList<String> referencias = new ArrayList<>();
+    private ArrayList<String> referenciasFinales = new ArrayList<>();
+    private ArrayList<String> primerasReferencias = new ArrayList<>();
 
     public ReferenceGenerator(BMPReader bmpReader, int pageSize) {
         this.bmpReader = bmpReader;
@@ -14,75 +18,103 @@ public class ReferenceGenerator {
     }
 
     // Método para generar las referencias de páginas y guardarlas en un archivo
-    public void generateReferences(String outputFile) {
-        try {
-            // Inicializar contadores
-            int referenceCount = 0;
-            int pageCount = 0;
+    public void generateReferences(String outputFile) throws IOException {
+        // Inicializar contadores
+        int referenceCount = 0;
 
-            // Obtener los datos de la imagen BMP
-            byte[][][] pixels = bmpReader.getPixels();
-            int width = bmpReader.getWidth();
-            int height = bmpReader.getHeight();
+        // Obtener los datos de la imagen BMP
+        byte[][][] pixels = bmpReader.getPixels();
+        int width = bmpReader.getWidth();
+        int height = bmpReader.getHeight();
 
-            // Leer longitud del mensaje escondido
-            int messageLength = bmpReader.leerLongitud(); // Obtener longitud del mensaje oculto
+        // Leer longitud del mensaje escondido
+        int messageLength = bmpReader.leerLongitud(); // Obtener longitud del mensaje oculto
 
-            // Calcular el número total de píxeles
-            int numberOfPixels = width * height;
+        // Calcular el número total de píxeles
+        int numberOfPixels = width * height;
 
-            // Calcular el total de bytes ocupados por la matriz de imagen
-            int totalBytesForImage = numberOfPixels * 3; // 3 bytes por píxel (RGB)
+        // Calcular el total de bytes ocupados por la matriz de imagen
+        int totalBytesForImage = numberOfPixels * 3; // 3 bytes por píxel (RGB)
 
-            // Calcular el total de bytes ocupados (incluyendo el mensaje oculto)
-            int totalBytes = totalBytesForImage + messageLength; // Sumando los bytes de la matriz y el mensaje oculto
+        // Calcular el total de bytes ocupados (incluyendo el mensaje oculto)
+        int totalBytes = totalBytesForImage + messageLength + 16; // Sumando los bytes de la matriz, el mensaje oculto y los 16 bits para la longitud
 
-            // Calcular el número de páginas necesarias
-            pageCount =(int) Math.ceil((double) totalBytes / pageSize); // Usar Math.ceil para redondear hacia arriba
+        // Calcular el número de páginas necesarias
+        int pageCount = (int) Math.ceil((double) totalBytes / pageSize); // Usar Math.ceil para redondear hacia arriba
 
-            // Generar referencias a la imagen (almacenada por filas, row-major order)
-            StringBuilder references = new StringBuilder();
+        // Generar las primeras referencias para la longitud del mensaje (primeros 16 bits)
+        for (int i = 0; i < 16; i++) {
+            int fila = i / (width * 3);
+            int col = (i % (width * 3)) / 3;
+            int color = (i % (width * 3)) % 3;
+            int direccionByte = fila * width * 3 + col * 3 + color;
+            int paginaVirtual = direccionByte / pageSize;
+            int desplazamiento = direccionByte % pageSize;
+            String componenteColor = (color == 0) ? "R" : (color == 1) ? "G" : "B";
 
-            for (int i = 0; i < height; i++) {
-                for (int j = 0; j < width; j++) {
-                    for (int color = 0; color < 3; color++) { // 3 colores (RGB)
-                        int reference = (i * width * 3) + (j * 3) + color;
-                        int virtualPage = reference / pageSize;
-                        int offset = reference % pageSize;
+            String referenciaImagen = "Imagen[" + fila + "][" + col + "]." + componenteColor + "," + paginaVirtual + "," + desplazamiento + ",R";
+            referencias.add(referenciaImagen);
+            referenceCount++;
+        }
 
-                        // Agregar referencia a la cadena
-                        references.append(String.format("Imagen[%d][%d].%s,%d,%d,R%n", i, j, getColorName(color), virtualPage, offset));
-                        referenceCount++;
-                    }
-                }
-            }
+        // Generar referencias para el mensaje oculto y la imagen
+        int totalBytesImagen = height * width * 3;
 
-            // Calcular la página del mensaje
-            int messagePage = totalBytesForImage / pageSize; // Página donde comienza el mensaje
+        for (int posCaracter = 0; posCaracter < messageLength; posCaracter++) {
+            // Registrar la escritura de los caracteres del mensaje
+            int direccionByteMensaje = totalBytesImagen + posCaracter;
+            int paginaVirtualEscritura = direccionByteMensaje / pageSize;
+            int desplazamientoEscritura = direccionByteMensaje % pageSize;
+            String referenciaMensaje = "Mensaje[" + posCaracter + "]," + paginaVirtualEscritura + "," + desplazamientoEscritura + ",W";
+            referencias.add(referenciaMensaje);
+            referenceCount++;
 
-            // Generar referencias para el vector de mensajes
-            for (int m = 0; m < messageLength; m++) {
-                references.append(String.format("Mensaje[0],%d,%d,W%n", messagePage, m)); // Desplazamiento dentro de la página
+            // Registrar las referencias de lectura de la imagen
+            for (int i = 0; i < 8; i++) {
+                int numeroByte = 16 + (posCaracter * 8) + i; // Saltando los primeros 16 bits (longitud)
+                int fila = numeroByte / (width * 3);
+                int col = (numeroByte % (width * 3)) / 3;
+                int color = (numeroByte % (width * 3)) % 3;
+                int direccionByteLectura = fila * width * 3 + col * 3 + color;
+                int paginaVirtualLectura = direccionByteLectura / pageSize;
+                int desplazamientoLectura = direccionByteLectura % pageSize;
+
+                // Registrar la referencia de lectura de la imagen
+                String componenteColor = (color == 0) ? "R" : (color == 1) ? "G" : "B";
+                String referenciaImagen = "Imagen[" + fila + "][" + col + "]." + componenteColor + "," + paginaVirtualLectura + "," + desplazamientoLectura + ",R";
+                referencias.add(referenciaImagen);
+                referenceCount++;
+
+                // Registrar nuevamente la escritura del mensaje
+                referencias.add(referenciaMensaje); // Se repite la escritura del mensaje después de leer cada bit
                 referenceCount++;
             }
+        }
 
-            // Escribir el archivo al final, con las variables de configuración al principio
-            try (PrintWriter writer = new PrintWriter(new BufferedWriter(new FileWriter(outputFile)))) {
-                // Escribir las configuraciones al inicio
-                writer.println("P=" + pageSize); // Tamaño de página
-                writer.println("NF=" + height); // Número de filas de la imagen
-                writer.println("NC=" + width); // Número de columnas de la imagen
-                writer.println("NR=" + referenceCount); // Número total de referencias
-                writer.println("NP=" + pageCount); // Número total de páginas virtuales
+        // Escribir las configuraciones iniciales al principio del archivo
+        primerasReferencias.add("P=" + pageSize);
+        primerasReferencias.add("NF=" + height);
+        primerasReferencias.add("NC=" + width);
+        primerasReferencias.add("NR=" + referenceCount);
+        primerasReferencias.add("NP=" + pageCount);
+        //primerasReferencias.add("LENGHT=" + messageLength);
 
-                // Escribir las referencias
-                writer.write(references.toString());
+
+        // Guardar las referencias en el archivo
+        guardarReferencias(outputFile);
+    }
+
+    // Método para guardar las referencias generadas en un archivo
+    public void guardarReferencias(String rutaArchivo) {
+        referenciasFinales.addAll(primerasReferencias);
+        referenciasFinales.addAll(referencias);
+        try (FileWriter fw = new FileWriter(rutaArchivo)) {
+            for (String referencia : referenciasFinales) {
+                fw.write(referencia + "\n");
             }
-
             System.out.println("Archivo de referencias generado exitosamente.");
-
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("Error al escribir el archivo de referencias: " + e.getMessage());
         }
     }
 
