@@ -27,13 +27,12 @@ public class CalculadoraDatos {
 
     private static int hits = 0;
     private static int fallos = 0;
-    private int[][] paresClases = {}; // Uso interno para el algoritmo NRU {página, clase}
+    private List<int[]> paresClases = new ArrayList<>();
     public static boolean primerThreadTerminado = false;
 
     public CalculadoraDatos(int numFrames, String nombreArchivo) {
         this.nombreArchivo = nombreArchivo;
         this.numFrames = numFrames;
-        nombreArchivo = nombreArchivo; //TODO: cambiar cuando tengamos direccion real
 
         // Inicializa los marcos de página en la lista con valores vacíos
         while (memoriaPaginas.size() < numFrames) {
@@ -74,13 +73,12 @@ public class CalculadoraDatos {
     // Primer hilo: Lee el archivo, verifica la página y actualiza el fallo o hit
     public class ProcesoLectura extends Thread {
         private String nombreArchivo;
-        private int numFrames;
         private int paginaVirtual;
         private String bitAccion;
+        private int numFrames;
 
         public ProcesoLectura(String nombreArchivo, int numFrames) {
             this.nombreArchivo = nombreArchivo;
-            this.numFrames = numFrames;
         }
 
         @Override
@@ -88,7 +86,7 @@ public class CalculadoraDatos {
             BufferedReader lector = null;
             try {
                 lector = new BufferedReader(new FileReader(nombreArchivo));
-                for (int i = 0; i < 4; i++) { // Ignora las primeras líneas
+                for (int i = 0; i < 3; i++) { // Ignora las primeras líneas
                     lector.readLine();
                 }
 
@@ -175,8 +173,7 @@ public class CalculadoraDatos {
             bitacora.info("Memoria disponible");
             int indice = memoriaPaginas.indexOf(-1);
             int[] nuevoPar = {paginaVirtual, 1};
-            paresClases = Arrays.copyOf(paresClases, paresClases.length + 1);
-            paresClases[paresClases.length - 1] = nuevoPar;
+            paresClases.add(nuevoPar);
             eliminarPar(indice);
             return indice;
         }
@@ -190,44 +187,46 @@ public class CalculadoraDatos {
                     if (pagMemoria == pag) {
                         if ((bits.get(0) == "R") && (bits.get(1).equals(0))) {
                             int[] nuevoPar = {pag, 0};
-                            paresClases = Arrays.copyOf(paresClases, paresClases.length + 1);
-                            paresClases[paresClases.length - 1] = nuevoPar;
+                            paresClases.add(nuevoPar);
                         }
                         if ((bits.get(0) == "W") && (bits.get(1).equals(0))) {
                             int[] nuevoPar = {pag, 1};
-                            paresClases = Arrays.copyOf(paresClases, paresClases.length + 1);
-                            paresClases[paresClases.length - 1] = nuevoPar;
+                            paresClases.add(nuevoPar);
                         }
                         if ((bits.get(0) == "R") && (bits.get(1).equals(1))) {
                             int[] nuevoPar = {pag, 2};
-                            paresClases = Arrays.copyOf(paresClases, paresClases.length + 1);
-                            paresClases[paresClases.length - 1] = nuevoPar;
+                            paresClases.add(nuevoPar);
                         }
                         if ((bits.get(0) == "W") && (bits.get(1).equals(1))) {
                             int[] nuevoPar = {pag, 3};
-                            paresClases = Arrays.copyOf(paresClases, paresClases.length + 1);
-                            paresClases[paresClases.length - 1] = nuevoPar;
+                            paresClases.add(nuevoPar);
                         }
                     }
                 }
             }
         }
 
-        int menorClase = Integer.MAX_VALUE;
-        int indiceClaseMenor = -1;
+        int menorClase = 4; 
+        int refSeleccionada = -1;
 
-        for (int i = 0; i < paresClases.length; i++) {
-            int claseActual = paresClases[i][1];
-            if (claseActual < menorClase) {
-                menorClase = claseActual;
-                indiceClaseMenor = i;
+        for (int[] par : paresClases) {
+            if (par[1] < menorClase) {
+                menorClase = par[1]; // Actualizamos la clase menor
+                refSeleccionada = par[0]; // Guardamos la referencia de la página
             }
         }
 
-        paginaParaRemplazo = paresClases[indiceClaseMenor][0];
-        eliminarPar(indiceClaseMenor);
+        if (refSeleccionada != -1) {
+            paginaParaRemplazo = refSeleccionada; // Asignamos la referencia seleccionada para reemplazo
+            bitacora.info("Referencia seleccionada: " + paginaParaRemplazo);
+        } else {
+            bitacora.info("Hay un fallo en memoria");
+            paginaParaRemplazo = -1;
+        }
+
         return paginaParaRemplazo;
     }
+
 
     public synchronized void registrarReferencia(int pagina, Object bitAccion, Object bitReferencia) {
         if (refAcciones.containsKey(pagina)) {
@@ -242,59 +241,51 @@ public class CalculadoraDatos {
         }
     }
 
-    public void eliminarPar(int valor) {
-        int contador = 0;
-        for (int[] par : paresClases) {
-            if (par[0] != valor) {
-                contador++;
-            }
+    public void eliminarPar(int index) {
+        if (isValidIndex(index)) {
+            paresClases.remove(index);
+            bitacora.info(String.format("Par eliminado en el índice: %d", index));
+        } else {
+            bitacora.warning(String.format("Índice fuera de rango: %d", index));
         }
-        int[][] nuevaLista = new int[contador][2];
-        int nuevoIndice = 0;
-        for (int[] par : paresClases) {
-            if (par[0] != valor) {
-                nuevaLista[nuevoIndice] = par;
-                nuevoIndice++;
-            }
-        }
-        paresClases = nuevaLista;
     }
-
+    
+    private boolean isValidIndex(int index) {
+        return index >= 0 && index < paresClases.size();
+    }
+    
+  
+    //thread 2
     public class ActualizadorBits extends Thread {
-        private static boolean enEjecucion = true;
+        public static boolean enEjecucion = true;
 
         @Override
         public void run() {
             while (enEjecucion) {
-                synchronized (this) {
+                synchronized (CalculadoraDatos.this) {
                     try {
-                        while (!primerThreadTerminado && enEjecucion) {
-                            CalculadoraDatos.this.wait();
-                        }
-                        actualizarReferencias();
-                        try {
-                            bitacora.info("Actualización de bits completada");
-                            sleep(4);
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
-                        primerThreadTerminado = false;
+                        // Esperar a que se notifique el fin del primer thread
+                        CalculadoraDatos.this.wait();
                     } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt(); // Restaurar el estado de interrupción
                     }
                 }
+
+                for (Map.Entry<Integer, List<Object>> entry : refAcciones.entrySet()) {
+                    List<Object> bits = entry.getValue();
+                    if (bits.get(0).equals("R")) {
+                        bits.set(1, 0); 
+                    }
+                }
+
+                // Registrar actualización
+                bitacora.info("Bits de referencia actualizados.");
             }
         }
 
-        public static void detenerHilo() {
-            enEjecucion = false;
-        }
+    public static void detenerHilo() {
+        enEjecucion = false;
     }
-
-    public synchronized void actualizarReferencias() {
-        for (Map.Entry<Integer, List<Object>> entrada : refAcciones.entrySet()) {
-            List<Object> lista = entrada.getValue();
-            lista.set(1, 0);
-        }
     }
 }
 
